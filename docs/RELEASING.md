@@ -7,8 +7,9 @@ mirror is `https://gitlab.com/techibytesmedia/vito-postgresql-manager`.
 `App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager`.
 
 1. Verify the actual Vito commit on the intended installation. This repository
-   targets 4.1.1 at `8598e4dc0bce12d2b2f915766a100b445b7d9e22`; version-string matching
-   is a minimum guard, not proof that another commit has identical APIs.
+   targets official 4.1.0 and 4.1.1 releases, whose exact commits are listed in
+   `release.json`. Test each release with its own locked dependencies; version-string
+   matching is a minimum guard, not proof that another commit has identical APIs.
 2. Run tests in [TESTING.md](TESTING.md), including the managed-host integration.
    Test ARM64 separately before claiming it. Record exact versions/results.
 3. Prepare a fresh source archive using the configured GitHub identity:
@@ -40,6 +41,8 @@ mirror is `https://gitlab.com/techibytesmedia/vito-postgresql-manager`.
    publication are authorized. Do not equate an archive extraction test with it.
 8. Optionally add the `vitodeploy-plugin` topic for community discovery.
 
-No release is published by the local build scripts or CI. `.work/`, `.ai/`, temp
-keys, dependency directories and test databases must never enter the published
-source. The generated source archive contains no credentials or development state.
+Local build scripts do not publish. The tag-specific GitHub Actions release workflows
+publish only their named tag; pushing `main` runs checks without making a release.
+Create a release tag only after checks pass and publication is authorized. `.work/`,
+`.ai/`, temp keys, dependency directories and test databases must never enter the
+published source. The generated source archive contains no credentials or development state.

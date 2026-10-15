@@ -45,8 +45,8 @@ def prepare(owner, repo, output):
     for path in output.rglob('*'):
         if path.suffix in ('.php', '.md', '.py', '.yml', '.json'):
             path.write_text(path.read_text(encoding='utf-8').replace(NAMESPACE, namespace), encoding='utf-8', newline='\n')
-    manifest = {'version': VERSION, 'owner': owner, 'repository': repo, 'namespace': namespace,
-                'vito_version': '4.1.1', 'vito_commit': '8598e4dc0bce12d2b2f915766a100b445b7d9e22'}
+    manifest = json.loads((ROOT / 'release.json').read_text(encoding='utf-8'))
+    manifest.update(version=VERSION, owner=owner, repository=repo, namespace=namespace)
     (output / 'release.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     archive = archive_path(output)
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:

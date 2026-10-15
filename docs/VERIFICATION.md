@@ -1,5 +1,33 @@
 # Verification ledger
 
+Compatibility follow-up on October 15, 2026: plugin 0.1.2 passed **76 host
+assertions on each official Vito release**, with independent source trees and
+their own unmodified Composer lockfiles:
+
+| Vito | Official commit | Host checks |
+| --- | --- | --- |
+| 4.1.0 | `c72f3d039cdc707e69b9659e30fa7727547a1175` | 76 passed |
+| 4.1.1 | `b65680dedceaa77c9f1d13ad2a8d2e67d8d2f692` | 76 passed |
+
+These Windows/PHP 8.4.12 runs exercised archive extraction, real Vito install,
+enable, disable, uninstall, reinstall and migration; all 17 enabled native forms;
+project/server/provider authorization; deduplication and DST; and compatibility
+rejection before migrations and on enable with existing metadata. Only the
+Windows-inapplicable pcntl/posix Composer extension requirements were ignored.
+
+A separate two-process Vito 4.1.0 recovery test passed **14 assertions**. The
+actual 0.1.1 archive reproduced the reported guard failure, leaving an uninstalled
+plugin record without metadata. Check for updates, Update, retry Install and
+Enable then succeeded using the prepared 0.1.2 archive, preserving the same plugin
+record. GitHub metadata/download were local fixture inputs; extraction, updater,
+installer and lifecycle actions were Vito's real implementations. This is not a
+public-network or browser verification of 0.1.2.
+
+Local Python checks: 25 passed, one POSIX symlink test skipped on Windows;
+38 PHP files passed syntax checks. The runtime worker and metadata schema are
+unchanged from 0.1.1. Live SSH/PostgreSQL, ARM64, and browser tests were not rerun
+for this compatibility change. CI now tests both exact official Vito releases.
+
 Security follow-up on October 15, 2026: version 0.1.1 passed 26 Linux unit tests
 and six real PostgreSQL security regressions in an offline, resource-limited
 sandbox. Both issues were reproduced against 0.1.0 and the patched SQL, backup,

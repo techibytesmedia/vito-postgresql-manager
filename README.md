@@ -1,7 +1,7 @@
 # Vito PostgreSQL Manager
 
-A standalone native server feature for **Vito 4.1.1**, source commit
-`8598e4dc0bce12d2b2f915766a100b445b7d9e22`. PostgreSQL is managed under
+A standalone native server feature for **Vito 4.1.0 and 4.1.1**. Exact official
+release commits are recorded in [release.json](release.json). PostgreSQL is managed under
 **Servers → Features → PostgreSQL Manager**. MariaDB remains on Vito's existing
 Databases, Users, and Backups pages. No core patches or frontend build are needed.
 
@@ -13,11 +13,11 @@ Source repositories: [GitHub](https://github.com/techibytesmedia/vito-postgresql
 and [GitLab](https://gitlab.com/techibytesmedia/vito-postgresql-manager). Vito's URL
 installer uses the GitHub repository and requires a published normal release.
 See [verification](docs/VERIFICATION.md) for exact checks performed and remaining
-release gates. Compatibility with other Vito 4 releases has not been verified.
+release gates. Other Vito releases are rejected until their APIs are verified.
 
 ## Requirements
 
-- Control application: reviewed Vito 4.1.1 APIs, PHP 8.4+, its existing locked
+- Control application: Vito 4.1.0 or 4.1.1, PHP 8.4+, its existing locked
   Laravel/SDK dependencies, and a shared cache supporting atomic locks.
 - Vito's scheduler must run every minute. Background PHP commands must be allowed
   on the control host. No extra Redis worker configuration is required.
@@ -46,8 +46,17 @@ asset alone does not work. See [the release procedure](docs/RELEASING.md).
 3. Open the managed server's **Features → PostgreSQL Manager**.
 
 The installer downloads the latest published normal GitHub release. A tag,
-draft or prerelease alone does not satisfy that flow. To upgrade from 0.1.0,
-disable the plugin, wait for running operations, update to 0.1.1, then re-enable.
+draft or prerelease alone does not satisfy that flow. To upgrade an installed plugin,
+disable it, wait for running operations, update to 0.1.2, then re-enable.
+**Vito 4.1.0 requires plugin 0.1.2 or later**; 0.1.1's version guard rejects it.
+
+If 0.1.1 failed with “This build targets the reviewed Vito 4.1.1 APIs”, open
+**Admin → Plugins → Check for updates**. In **Discovered**, use the plugin's
+menu to **Update**, then **Install**. Finally enable it from **Installed**.
+The failed installation leaves a plugin record, so pasting the repository URL
+again can report “Plugin is already installed”. Updating that record avoids
+deleting it or changing Vito's core files. The version check runs before metadata
+migrations and does not contact the managed PostgreSQL server.
 
 For local development use the generated source tree in
 `app/Vito/Plugins/Techibytesmedia/VitoPostgresqlManager`, then use **Discover**, install,

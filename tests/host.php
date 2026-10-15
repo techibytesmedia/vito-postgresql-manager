@@ -18,8 +18,12 @@ function check(bool $condition, string $message): void {
     if (!$condition) { throw new RuntimeException('FAIL: '.$message); }
     $checks++; echo 'PASS '.$message.PHP_EOL;
 }
-function rejects(callable $fn, string $class, string $message): void {
-    try { $fn(); } catch (Throwable $e) { check($e instanceof $class, $message.' ('.get_class($e).')'); return; }
+function rejects(callable $fn, string $class, string $message, ?string $detail = null): void {
+    try { $fn(); } catch (Throwable $e) {
+        check($e instanceof $class, $message.' ('.get_class($e).')');
+        if ($detail !== null) { check(str_contains($e->getMessage(), $detail), $message.' explains the detected version'); }
+        return;
+    }
     check(false, $message);
 }
 
@@ -30,8 +34,26 @@ app(App\Actions\Plugins\Github\ExtractPlugin::class)->handle($archive, $destinat
 check(is_file($destination.'/Plugin.php') && is_file($destination.'/runtime/agent.py'), 'Vito extracts the GitHub-style source archive with runtime files');
 app(App\Actions\Plugins\DiscoverPlugins::class)->handle();
 $plugin = App\Models\Plugin::where('namespace', App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Plugin::class)->firstOrFail();
+$vitoVersion = config('app.version');
+$manifest = json_decode(file_get_contents($destination.'/release.json'), true, flags: JSON_THROW_ON_ERROR);
+check(array_keys($manifest['vito_releases']) === App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::SUPPORTED_VITO, 'Release metadata lists exactly the guarded Vito releases');
+foreach (['4.0.1', '4.2.0', null] as $unsupported) {
+    config(['app.version' => $unsupported]);
+    rejects(fn () => App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::migrate(), RuntimeException::class, 'Untested Vito release rejected before migration', 'Unsupported Vito version '.($unsupported ?? 'unknown'));
+    check(!Illuminate\Support\Facades\Schema::hasTable('vpgm_settings'), 'Rejected release creates no plugin metadata');
+}
+rejects(fn () => app(App\Actions\Plugins\InstallPlugin::class)->handle($plugin), Exception::class, 'Real Vito installer records a blocked installation');
+check(!$plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled, 'Blocked installation remains available for retry');
+check(str_contains($plugin->errors()->latest('id')->firstOrFail()->error_message, 'Unsupported Vito version unknown'), 'Vito installation log preserves the useful compatibility error');
+check(!Illuminate\Support\Facades\Schema::hasTable('vpgm_settings'), 'Failed real installation creates no plugin metadata');
+config(['app.version' => $vitoVersion]);
 app(App\Actions\Plugins\InstallPlugin::class)->handle($plugin);
 check($plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled, 'Vito installation creates schema and leaves plugin disabled');
+config(['app.version' => '4.2.0']);
+rejects(fn () => app(App\Actions\Plugins\EnablePlugin::class)->handle($plugin), Exception::class, 'Real Vito enable rejects an untested release even when metadata exists');
+check(!$plugin->fresh()->is_enabled && !App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::enabled(), 'Rejected enable leaves plugin and metadata disabled');
+check(str_contains($plugin->errors()->latest('id')->firstOrFail()->error_message, 'Unsupported Vito version 4.2.0'), 'Vito enable log identifies the unsupported release');
+config(['app.version' => $vitoVersion]);
 app(App\Actions\Plugins\EnablePlugin::class)->handle($plugin);
 check($plugin->fresh()->is_enabled, 'Vito enable lifecycle succeeds');
 app(App\Actions\Plugins\BootPlugins::class)->handle();

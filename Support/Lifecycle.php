@@ -10,6 +10,17 @@ use RuntimeException;
 final class Lifecycle
 {
     public const SCHEMA = 1;
+    public const SUPPORTED_VITO = ['4.1.0', '4.1.1'];
+
+    private static function requirements(): void
+    {
+        if (PHP_VERSION_ID < 80400) { throw new RuntimeException('PHP 8.4 or later is required.'); }
+        $version = config('app.version');
+        if (!in_array($version, self::SUPPORTED_VITO, true)) {
+            $detected = is_string($version) && $version !== '' ? $version : 'unknown';
+            throw new RuntimeException('Unsupported Vito version '.$detected.'. This plugin supports Vito '.implode(', ', self::SUPPORTED_VITO).'.');
+        }
+    }
     public static function ready(): bool
     {
         return Schema::hasTable('vpgm_settings') && (int) DB::table('vpgm_settings')->where('id', 1)->value('schema_version') === self::SCHEMA;
@@ -20,8 +31,7 @@ final class Lifecycle
     }
     public static function migrate(): void
     {
-        if (PHP_VERSION_ID < 80400) { throw new RuntimeException('PHP 8.4 or later is required.'); }
-        if (config('app.version') !== '4.1.1') { throw new RuntimeException('This build targets the reviewed Vito 4.1.1 APIs. Verify another release before changing this guard.'); }
+        self::requirements();
         $lock = Cache::lock('vpgm-lifecycle', 4000);
         if (!$lock->get()) { throw new RuntimeException('PostgreSQL worker is active; wait for it before installing or migrating.'); }
         try {
@@ -34,6 +44,7 @@ final class Lifecycle
     }
     public static function enable(): void
     {
+        self::requirements();
         if (!self::ready()) { self::migrate(); }
         DB::table('vpgm_settings')->where('id', 1)->update(['enabled' => true]);
     }

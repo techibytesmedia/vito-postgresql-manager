@@ -5,6 +5,13 @@ with PHP 8.4+. Linux needs all Vito extensions; Windows host tests can install w
 `--no-dev --no-scripts --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix`.
 Do not use those exceptions for a production Linux deployment.
 
+Run the host suite separately against both official releases (CI uses this matrix):
+
+| Vito | Official release commit |
+| --- | --- |
+| 4.1.0 | `c72f3d039cdc707e69b9659e30fa7727547a1175` |
+| 4.1.1 | `b65680dedceaa77c9f1d13ad2a8d2e67d8d2f692` |
+
 ```sh
 python -m unittest discover -s tests -p 'test_*.py' -v
 python tools/test_archive.py dist/development
@@ -16,8 +23,27 @@ extracts the generated source archive through Vito's ExtractPlugin, discovers an
 installs/enables it through Vito's actual actions, and exercises native form
 generation, policies, scope tampering, confirmations, deduplication and lifecycle.
 It uses no SSH for these checks and is not evidence of live cluster functionality.
+Compatibility checks reject untested/missing versions before creating metadata,
+check Vito's error logs and failed-install retry, and reject an unsupported
+release on enable even when metadata already exists.
 The script prints the isolated database path. The disposable Vito tree may be
 removed after testing; no database outside it is used.
+
+For the failed-install recovery regression, obtain the 0.1.1 source archive at
+commit `1c371f2202a43810966db71a5a5011d7937471fa`. Use a disposable **Vito 4.1.0**
+checkout and a fresh 12-character hexadecimal run ID for each run. Run both commands
+as separate PHP processes against the same checkout and run ID:
+
+```sh
+php tests/recovery.php PATH_TO_VITO_4_1_0 PATH_TO_0_1_1_ZIP 011012000410 rejected
+php tests/recovery.php PATH_TO_VITO_4_1_0 dist/development.zip 011012000410 recovered
+```
+
+The first command runs the real 0.1.1 code and verifies its rejection leaves a
+plugin row with no metadata. The second tests **Check for updates → Update →
+Install → Enable** using Vito's real installer/updater/lifecycle actions. Only
+GitHub release metadata and the archive download are replaced with local fixture
+inputs. This test is not a public GitHub network download or a browser UI test.
 
 For real Linux integration, run the provided disposable lab from a root shell in
 WSL/Linux. It downloads a checksummed Ubuntu Base 24.04.4 filesystem into
