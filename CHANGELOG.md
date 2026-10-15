@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (development)
+## 0.1.0
 
 - Native PostgreSQL Manager feature and explicit existing-cluster adoption.
 - Isolated metadata, database/login management, additive access grants and controls.
