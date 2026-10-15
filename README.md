@@ -5,6 +5,10 @@ A standalone native server feature for **Vito 4.1.1**, source commit
 **Servers → Features → PostgreSQL Manager**. MariaDB remains on Vito's existing
 Databases, Users, and Backups pages. No core patches or frontend build are needed.
 
+**Use v0.1.1 or later.** Version 0.1.1 fixes database connection-string injection
+and privileged schema search-path handling present in 0.1.0. See
+[security fixes and regression coverage](docs/SECURITY.md).
+
 Source repositories: [GitHub](https://github.com/techibytesmedia/vito-postgresql-manager)
 and [GitLab](https://gitlab.com/techibytesmedia/vito-postgresql-manager). Vito's URL
 installer uses the GitHub repository and requires a published normal release.
@@ -36,12 +40,14 @@ The source namespace is configured for `techibytesmedia/vito-postgresql-manager`
 All runtime files must be committed in the tagged source tree; an uploaded ZIP
 asset alone does not work. See [the release procedure](docs/RELEASING.md).
 
-1. Publish a normal public GitHub release after verification. A tag, draft, or
-   prerelease is insufficient for Vito's latest-release installation flow.
-2. In Vito open **Admin → Plugins → Install** and paste
+1. In Vito open **Admin → Plugins → Install** and paste
    `https://github.com/techibytesmedia/vito-postgresql-manager`.
-3. Install, then enable from **Installed**. Installation initially leaves it disabled.
-4. Open the managed server's **Features → PostgreSQL Manager**.
+2. Install, then enable from **Installed**. Installation initially leaves it disabled.
+3. Open the managed server's **Features → PostgreSQL Manager**.
+
+The installer downloads the latest published normal GitHub release. A tag,
+draft or prerelease alone does not satisfy that flow. To upgrade from 0.1.0,
+disable the plugin, wait for running operations, update to 0.1.1, then re-enable.
 
 For local development use the generated source tree in
 `app/Vito/Plugins/Techibytesmedia/VitoPostgresqlManager`, then use **Discover**, install,

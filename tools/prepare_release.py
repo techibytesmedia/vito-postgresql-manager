@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMESPACE = re.search(r'^namespace\s+([^;]+);', (ROOT / 'Plugin.php').read_text(encoding='utf-8'), re.M)[1]
+VERSION = re.search(r"public const VERSION = '([^']+)';", (ROOT / 'Plugin.php').read_text(encoding='utf-8'))[1]
 RUNTIME = ['Plugin.php', 'Actions', 'Console', 'Jobs', 'Models', 'Services', 'Support', 'database', 'runtime']
 
 
@@ -44,7 +45,7 @@ def prepare(owner, repo, output):
     for path in output.rglob('*'):
         if path.suffix in ('.php', '.md', '.py', '.yml', '.json'):
             path.write_text(path.read_text(encoding='utf-8').replace(NAMESPACE, namespace), encoding='utf-8', newline='\n')
-    manifest = {'version': '0.1.0', 'owner': owner, 'repository': repo, 'namespace': namespace,
+    manifest = {'version': VERSION, 'owner': owner, 'repository': repo, 'namespace': namespace,
                 'vito_version': '4.1.1', 'vito_commit': '8598e4dc0bce12d2b2f915766a100b445b7d9e22'}
     (output / 'release.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     archive = archive_path(output)

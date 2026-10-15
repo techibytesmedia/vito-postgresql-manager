@@ -13,7 +13,7 @@ use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle;
 
 class Plugin extends AbstractPlugin
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.1.1';
     public const FEATURE = 'vito-postgresql-manager';
     protected string $name = 'PostgreSQL Manager';
     protected string $description = 'Manage explicitly adopted PostgreSQL clusters alongside Vito’s existing MariaDB management.';

@@ -1,5 +1,11 @@
 # Verification ledger
 
+Security follow-up on October 15, 2026: version 0.1.1 passed 26 Linux unit tests
+and six real PostgreSQL security regressions in an offline, resource-limited
+sandbox. Both issues were reproduced against 0.1.0 and the patched SQL, backup,
+restore and grant paths passed. See [SECURITY.md](SECURITY.md) for exact scope,
+negative controls and isolation limits.
+
 Target source: Vito 4.1.1, commit
 `8598e4dc0bce12d2b2f915766a100b445b7d9e22`.
 
@@ -47,16 +53,17 @@ source and MariaDB remained the default engine. The demo uses shared file-cache
 locks across separate web and worker processes. See BROWSER_DEMO.md for startup
 instructions. Browser evidence is saved locally under `.work/browser-proof/`.
 
-Not exercised: ARM64, S3 network transfers, a Linux control application runtime,
-and the public GitHub latest-release download
-endpoint for this unpublished plugin. The source archive test does not claim a
-public GitHub URL was installed.
+The published 0.1.0 GitHub latest-release download and real Vito URL installer
+were subsequently verified on the separate disposable Vito 4.1.1 instance:
+download, installation, enable and all 17 action registrations passed.
+
+Not exercised: ARM64, S3 network transfers and a Linux control application runtime.
 
 The permanent identity is now `techibytesmedia/vito-postgresql-manager` on GitHub,
 with the same source mirrored to GitLab. The intended deployment uses Local
 storage; S3 network verification is not required for that deployment and remains
 an unverified optional integration.
 
-Release gates: release publication authorization, real public URL installation,
-ARM64 functional exercise, and confirmation of the live Vito commit. The target
+Deployment checks remaining: ARM64 functional exercise and confirmation of the
+live Vito commit. The target
 server reports `arm64`; this confirms its architecture, not plugin functionality.

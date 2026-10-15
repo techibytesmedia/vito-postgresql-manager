@@ -125,9 +125,35 @@ class WorkerTests(unittest.TestCase):
         with patch.object(worker, 'run', return_value='') as run:
             self.agent().sql('SELECT 1', '-d evil;$(id)')
             args, sql = run.call_args.args
-            self.assertIn('--dbname=-d evil;$(id)', args)
+            connection = next(arg for arg in args if arg.startswith('--dbname='))
+            self.assertIn("dbname='-d evil;$(id)'", connection)
+            self.assertIn("host='/var/run/postgresql'", connection)
+            self.assertIn("port='5432'", connection)
             self.assertEqual(args[0], '/usr/lib/postgresql/18/bin/psql')
             self.assertIn('lock_timeout', sql)
+            self.assertTrue(sql.startswith('SET search_path = pg_catalog;'))
+
+    def test_connection_uses_libpq_value_escaping(self):
+        self.assertEqual(worker.connection_value("x'\\y"), "'x\\'\\\\y'")
+        with self.assertRaises(worker.OperationError):
+            worker.connection_value('x\0')
+
+    def test_connection_keeps_database_inside_fixed_parameters(self):
+        for name in ('dbname=postgres', 'postgresql:///postgres', "x' host=wrong \\ y"):
+            with self.subTest(name=name):
+                connection = self.agent().connection(name)
+                self.assertIn('dbname=' + worker.connection_value(name), connection)
+                self.assertIn("user='postgres'", connection)
+                self.assertIn("options='-csearch_path=pg_catalog'", connection)
+                self.assertIn("passfile='/dev/null'", connection)
+
+    def test_connection_rejects_invalid_names_and_ports(self):
+        for name in ('', 'x\nname', 'x' * 64):
+            with self.assertRaises(worker.OperationError):
+                self.agent().connection(name)
+        for port in (0, -1, 65536):
+            with self.assertRaises(worker.OperationError):
+                self.agent(port=port).connection('postgres')
 
     def test_subprocess_failure_redacts_output_and_arguments(self):
         with patch.object(worker.subprocess, 'run', return_value=Mock(returncode=1, stderr='SECRET SQL verifier', stdout='SECRET')):

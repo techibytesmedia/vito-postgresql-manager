@@ -49,3 +49,7 @@ have disappeared. Do not reuse these scripts against a real managed server.
 
 All verification claims must distinguish SQL/SSH integration, real installer
 extraction/lifecycle, browser UI rendering and published GitHub URL installation.
+
+For the 0.1.1 connection-string and schema-search-path regressions, see
+[SECURITY.md](SECURITY.md). That live fixture uses its own freshly initialized
+cluster in an offline sandbox and includes negative controls against 0.1.0.

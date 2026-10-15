@@ -37,6 +37,14 @@ def literal(value):
     return "E'" + str(value).replace('\\', '\\\\').replace("'", "''") + "'"
 
 
+def connection_value(value):
+    """Quote one libpq keyword value; SQL quoting is a different grammar."""
+    value = str(value)
+    if '\x00' in value:
+        raise OperationError('NUL is not permitted in connection parameters.')
+    return "'" + value.replace('\\', '\\\\').replace("'", "\\'") + "'"
+
+
 def run(args, data=None, timeout=120):
     env = {'PATH': '/usr/bin:/bin', 'HOME': '/var/lib/postgresql', 'LANG': 'C.UTF-8'}
     try:
@@ -93,12 +101,26 @@ class Agent:
                 raise OperationError('Connected cluster does not match the adopted cluster.')
         return found
 
-    def sql(self, sql, db='postgres'):
+    def connection(self, db):
         identifier(db)
+        if not 1 <= self.port <= 65535:
+            raise OperationError('Invalid cluster port.')
+        # libpq expands a raw --dbname containing '=' or a URI prefix. Always
+        # construct the outer connection string ourselves and quote the literal
+        # database name inside it. Its dbname value is not recursively expanded.
+        parameters = {
+            'host': '/var/run/postgresql', 'port': self.port, 'user': 'postgres',
+            'dbname': db, 'options': '-csearch_path=pg_catalog',
+            'connect_timeout': 10, 'passfile': '/dev/null',
+        }
+        return ' '.join(key + '=' + connection_value(value) for key, value in parameters.items())
+
+    def sql(self, sql, db='postgres'):
         args = [f'/usr/lib/postgresql/{self.major}/bin/psql', '--no-psqlrc', '--no-password',
-                '-h', '/var/run/postgresql', '-p', str(self.port), '-U', 'postgres',
-                '--dbname=' + db, '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=terse', '-Atq']
-        return run(args, "SET statement_timeout='60s'; SET lock_timeout='5s';\n" + sql)
+                '--dbname=' + self.connection(db), '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=terse', '-Atq']
+        # Also reset the path immediately before every administrative query.
+        # Database/role defaults and application schemas are never trusted here.
+        return run(args, "SET search_path = pg_catalog; SET statement_timeout='60s'; SET lock_timeout='5s';\n" + sql)
 
     def query(self, sql, db='postgres'):
         output = self.sql(sql, db).strip()
@@ -232,7 +254,7 @@ class Agent:
         if path.exists():
             raise OperationError('Artifact already exists; refresh history before retrying.')
         try:
-            run([f'/usr/lib/postgresql/{self.major}/bin/pg_dump', '-h', '/var/run/postgresql', '-p', str(self.port), '-U', 'postgres', '--no-password', '--format=custom', '--dbname=' + name, '--file=' + str(path)], timeout=1800)
+            run([f'/usr/lib/postgresql/{self.major}/bin/pg_dump', '--no-password', '--format=custom', '--dbname=' + self.connection(name), '--file=' + str(path)], timeout=1800)
             os.chmod(path, 0o600)
             with path.open('rb') as stream:
                 checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -254,7 +276,7 @@ class Agent:
         if not match or int(match[1]) > int(self.major):
             raise OperationError('Backup server version is incompatible with the target cluster.')
         self.create_database()  # Refuses an existing target. Never drops one.
-        run([f'/usr/lib/postgresql/{self.major}/bin/pg_restore', '-h', '/var/run/postgresql', '-p', str(self.port), '-U', 'postgres', '--no-password', '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction', '--role=' + self.r['owner'], '--dbname=' + self.r['name'], str(path)], timeout=1800)
+        run([f'/usr/lib/postgresql/{self.major}/bin/pg_restore', '--no-password', '--no-owner', '--no-privileges', '--exit-on-error', '--single-transaction', '--role=' + self.r['owner'], '--dbname=' + self.connection(self.r['name']), str(path)], timeout=1800)
         return {'message': 'Restored into the new database. Ownership uses the selected login; source ACLs were not imported.'}
 
     def execute(self):
