@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "owner": "techibytesmedia",
+  "repository": "vito-postgresql-manager",
+  "namespace": "App\\Vito\\Plugins\\Techibytesmedia\\VitoPostgresqlManager",
+  "vito_version": "4.1.1",
+  "vito_commit": "8598e4dc0bce12d2b2f915766a100b445b7d9e22"
+}

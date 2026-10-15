@@ -1,0 +1,22 @@
+name: Checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sqlite3, pdo_sqlite, intl, ftp, zip, pcntl, posix, bcmath
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: find Actions Console Jobs Models Services Support database -name '*.php' -exec php -l {} \; && php -l Plugin.php
+      - run: |
+          mkdir -p .work
+          curl -fsSL https://codeload.github.com/vitodeploy/vito/zip/8598e4dc0bce12d2b2f915766a100b445b7d9e22 -o .work/vito.zip
+          unzip -q .work/vito.zip -d .work
+          cd .work/vito-8598e4dc0bce12d2b2f915766a100b445b7d9e22
+          composer install --no-dev --no-interaction --prefer-dist --no-scripts
+      - run: |
+          python tools/test_archive.py dist/development
+          php tests/host.php .work/vito-8598e4dc0bce12d2b2f915766a100b445b7d9e22 dist/development.zip
