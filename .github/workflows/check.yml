@@ -12,6 +12,8 @@ jobs:
             commit: c72f3d039cdc707e69b9659e30fa7727547a1175
           - vito: '4.1.1'
             commit: b65680dedceaa77c9f1d13ad2a8d2e67d8d2f692
+          - vito: '4.3.0'
+            commit: f5eaa88f67bc0de49742b317a43baab212445441
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2

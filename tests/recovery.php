@@ -30,7 +30,8 @@ function check(bool $condition, string $message): void {
 }
 check(config('app.version') === '4.1.0', 'Recovery fixture is the real Vito 4.1.0 release');
 Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-$version = $phase === 'rejected' ? 'v0.1.1' : 'v0.1.2';
+$manifest = json_decode(file_get_contents(dirname(__DIR__).'/release.json'), true, flags: JSON_THROW_ON_ERROR);
+$version = $phase === 'rejected' ? 'v0.1.1' : 'v'.$manifest['version'];
 app()->instance(App\Actions\Plugins\Github\GetReleaseInfo::class, new class($version) extends App\Actions\Plugins\Github\GetReleaseInfo {
     public function __construct(private string $tag) {}
     public function handle(string $username, string $repo, string $version = 'latest'): ?App\DTOs\GitHub\ReleaseDto {
@@ -65,8 +66,8 @@ if ($phase === 'rejected') {
     app(App\Actions\Plugins\Github\CheckForUpdates::class)->handle();
     check($plugin->fresh()->updates_available, 'Check for updates includes a failed installation');
     app(App\Actions\Plugins\Github\UpdateGithubPlugin::class)->handle($plugin);
-    check($plugin->fresh()->version === 'v0.1.2' && !$plugin->fresh()->is_installed, 'Vito updater replaces the source without marking it installed');
-    check(App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Plugin::VERSION === '0.1.2', 'New request loads the updated implementation');
+    check($plugin->fresh()->version === $version && !$plugin->fresh()->is_installed, 'Vito updater replaces the source without marking it installed');
+    check(App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Plugin::VERSION === $manifest['version'], 'New request loads the updated implementation');
     app(App\Actions\Plugins\InstallPlugin::class)->handle($plugin);
     check($plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled, 'Retry Install succeeds on Vito 4.1.0');
     app(App\Actions\Plugins\EnablePlugin::class)->handle($plugin);

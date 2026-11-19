@@ -5,12 +5,13 @@ with PHP 8.4+. Linux needs all Vito extensions; Windows host tests can install w
 `--no-dev --no-scripts --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix`.
 Do not use those exceptions for a production Linux deployment.
 
-Run the host suite separately against both official releases (CI uses this matrix):
+Run the host suite separately against the official releases in the CI matrix.
 
 | Vito | Official release commit |
 | --- | --- |
 | 4.1.0 | `c72f3d039cdc707e69b9659e30fa7727547a1175` |
 | 4.1.1 | `b65680dedceaa77c9f1d13ad2a8d2e67d8d2f692` |
+| 4.3.0 | `f5eaa88f67bc0de49742b317a43baab212445441` |
 
 ```sh
 python -m unittest discover -s tests -p 'test_*.py' -v
@@ -23,9 +24,8 @@ extracts the generated source archive through Vito's ExtractPlugin, discovers an
 installs/enables it through Vito's actual actions, and exercises native form
 generation, policies, scope tampering, confirmations, deduplication and lifecycle.
 It uses no SSH for these checks and is not evidence of live cluster functionality.
-Compatibility checks reject untested/missing versions before creating metadata,
-check Vito's error logs and failed-install retry, and reject an unsupported
-release on enable even when metadata already exists.
+The suite verifies that installation succeeds without a configured Vito version
+and that enablement succeeds with an unlisted version on a host with the required APIs.
 The script prints the isolated database path. The disposable Vito tree may be
 removed after testing; no database outside it is used.
 

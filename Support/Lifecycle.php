@@ -2,6 +2,10 @@
 
 namespace App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support;
 
+use App\DTOs\{DynamicField, DynamicForm};
+use App\Models\Server;
+use App\Plugins\{RegisterCommand, RegisterServerFeature, RegisterServerFeatureAction};
+use App\ServerFeatures\Action;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,15 +14,25 @@ use RuntimeException;
 final class Lifecycle
 {
     public const SCHEMA = 1;
-    public const SUPPORTED_VITO = ['4.1.0', '4.1.1'];
 
     private static function requirements(): void
     {
         if (PHP_VERSION_ID < 80400) { throw new RuntimeException('PHP 8.4 or later is required.'); }
-        $version = config('app.version');
-        if (!in_array($version, self::SUPPORTED_VITO, true)) {
-            $detected = is_string($version) && $version !== '' ? $version : 'unknown';
-            throw new RuntimeException('Unsupported Vito version '.$detected.'. This plugin supports Vito '.implode(', ', self::SUPPORTED_VITO).'.');
+        $apis = [
+            RegisterServerFeature::class => ['make', 'label', 'description', 'register'],
+            RegisterServerFeatureAction::class => ['make', 'label', 'handler', 'register'],
+            RegisterCommand::class => ['make', 'register', 'get'],
+            Action::class => ['__construct'],
+            DynamicField::class => ['make', 'alert', 'text', 'password', 'select', 'label', 'description', 'default', 'options'],
+            DynamicForm::class => ['make'],
+            Server::class => ['features', 'ssh'],
+        ];
+        foreach ($apis as $class => $methods) {
+            foreach ($methods as $method) {
+                if (!method_exists($class, $method)) {
+                    throw new RuntimeException('Incompatible Vito plugin API: missing '.$class.'::'.$method.'().');
+                }
+            }
         }
     }
     public static function ready(): bool

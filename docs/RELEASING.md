@@ -6,10 +6,9 @@ mirror is `https://gitlab.com/techibytesmedia/vito-postgresql-manager`.
 `release.json` records this identity and the expected namespace:
 `App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager`.
 
-1. Verify the actual Vito commit on the intended installation. This repository
-   targets official 4.1.0 and 4.1.1 releases, whose exact commits are listed in
-   `release.json`. Test each release with its own locked dependencies; version-string
-   matching is a minimum guard, not proof that another commit has identical APIs.
+1. Verify the actual Vito commit on the intended installation. `release.json`
+   records the official releases in the test matrix. Test each release with its
+   own locked dependencies. Installation and enablement use Vito API checks.
 2. Run tests in [TESTING.md](TESTING.md), including the managed-host integration.
    Test ARM64 separately before claiming it. Record exact versions/results.
 3. Prepare a fresh source archive using the configured GitHub identity:

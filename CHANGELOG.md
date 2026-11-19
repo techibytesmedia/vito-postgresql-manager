@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Check for required Vito APIs during installation and enablement, removing the
+  exact version allowlist. Add Vito 4.3.0 to the host test matrix.
+- Reuse plugin registrations from cached Vito configuration so route caching
+  keeps the plugin enabled and its worker scheduled.
+
 ## 0.1.2
 
 - Support official Vito 4.1.0 and 4.1.1 releases with an explicit compatibility list.

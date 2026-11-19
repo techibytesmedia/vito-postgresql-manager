@@ -1,5 +1,11 @@
 # Verification ledger
 
+Plugin 0.1.3 passed **61 host assertions each on
+Vito 4.1.0, 4.1.1, and 4.3.0** using PHP 8.4.12 and each release's locked
+dependencies. The checks cover installation without a configured version,
+enablement with an unlisted version, and a fresh boot with both configuration
+and route caches. These were control-host tests using SQLite.
+
 Compatibility follow-up on October 15, 2026: plugin 0.1.2 passed **76 host
 assertions on each official Vito release**, with independent source trees and
 their own unmodified Composer lockfiles:

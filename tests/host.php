@@ -1,5 +1,9 @@
 <?php
 /** Real pinned Vito application tests, using its installer and policies. */
+use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Actions\{CreateDatabase, DeleteDatabase};
+use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Models\{Cluster, Resource, Operation, BackupSchedule};
+use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\{Input, Lifecycle};
+
 $root = dirname(__DIR__);
 $host = realpath($argv[1] ?? '') ?: throw new RuntimeException('Pass the path to the pinned Vito checkout with vendor installed.');
 $dbName = 'vpgm-test-'.bin2hex(random_bytes(6)).'.sqlite';
@@ -18,10 +22,9 @@ function check(bool $condition, string $message): void {
     if (!$condition) { throw new RuntimeException('FAIL: '.$message); }
     $checks++; echo 'PASS '.$message.PHP_EOL;
 }
-function rejects(callable $fn, string $class, string $message, ?string $detail = null): void {
+function rejects(callable $fn, string $class, string $message): void {
     try { $fn(); } catch (Throwable $e) {
         check($e instanceof $class, $message.' ('.get_class($e).')');
-        if ($detail !== null) { check(str_contains($e->getMessage(), $detail), $message.' explains the detected version'); }
         return;
     }
     check(false, $message);
@@ -35,34 +38,31 @@ check(is_file($destination.'/Plugin.php') && is_file($destination.'/runtime/agen
 app(App\Actions\Plugins\DiscoverPlugins::class)->handle();
 $plugin = App\Models\Plugin::where('namespace', App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Plugin::class)->firstOrFail();
 $vitoVersion = config('app.version');
-$manifest = json_decode(file_get_contents($destination.'/release.json'), true, flags: JSON_THROW_ON_ERROR);
-check(array_keys($manifest['vito_releases']) === App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::SUPPORTED_VITO, 'Release metadata lists exactly the guarded Vito releases');
-foreach (['4.0.1', '4.2.0', null] as $unsupported) {
-    config(['app.version' => $unsupported]);
-    rejects(fn () => App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::migrate(), RuntimeException::class, 'Untested Vito release rejected before migration', 'Unsupported Vito version '.($unsupported ?? 'unknown'));
-    check(!Illuminate\Support\Facades\Schema::hasTable('vpgm_settings'), 'Rejected release creates no plugin metadata');
-}
-rejects(fn () => app(App\Actions\Plugins\InstallPlugin::class)->handle($plugin), Exception::class, 'Real Vito installer records a blocked installation');
-check(!$plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled, 'Blocked installation remains available for retry');
-check(str_contains($plugin->errors()->latest('id')->firstOrFail()->error_message, 'Unsupported Vito version unknown'), 'Vito installation log preserves the useful compatibility error');
-check(!Illuminate\Support\Facades\Schema::hasTable('vpgm_settings'), 'Failed real installation creates no plugin metadata');
-config(['app.version' => $vitoVersion]);
+config(['app.version' => null]);
 app(App\Actions\Plugins\InstallPlugin::class)->handle($plugin);
-check($plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled, 'Vito installation creates schema and leaves plugin disabled');
-config(['app.version' => '4.2.0']);
-rejects(fn () => app(App\Actions\Plugins\EnablePlugin::class)->handle($plugin), Exception::class, 'Real Vito enable rejects an untested release even when metadata exists');
-check(!$plugin->fresh()->is_enabled && !App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\Lifecycle::enabled(), 'Rejected enable leaves plugin and metadata disabled');
-check(str_contains($plugin->errors()->latest('id')->firstOrFail()->error_message, 'Unsupported Vito version 4.2.0'), 'Vito enable log identifies the unsupported release');
-config(['app.version' => $vitoVersion]);
+check($plugin->fresh()->is_installed && !$plugin->fresh()->is_enabled && Lifecycle::ready(), 'Vito installation creates schema and leaves plugin disabled with no version configured');
+config(['app.version' => '99.0.0']);
 app(App\Actions\Plugins\EnablePlugin::class)->handle($plugin);
-check($plugin->fresh()->is_enabled, 'Vito enable lifecycle succeeds');
+check($plugin->fresh()->is_enabled && Lifecycle::enabled(), 'Vito enable succeeds with an unlisted version');
+config(['app.version' => $vitoVersion]);
 app(App\Actions\Plugins\BootPlugins::class)->handle();
 check(count(config('server.features.vito-postgresql-manager.actions')) === 17, 'All 17 native actions register through Vito');
 check(collect(app(Illuminate\Console\Scheduling\Schedule::class)->events())->contains(fn ($e) => str_contains($e->command ?? '', 'vito-pg:work')), 'Plugin worker registered with Laravel scheduler');
 
-use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Models\{Cluster, Resource, Operation, BackupSchedule};
-use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Support\{Input, Lifecycle};
-use App\Vito\Plugins\Techibytesmedia\VitoPostgresqlManager\Actions\{CreateDatabase, DeleteDatabase};
+$cachePaths = [
+    'APP_CONFIG_CACHE' => 'bootstrap/cache/'.basename($dbName, '.sqlite').'-config.php',
+    'APP_ROUTES_CACHE' => 'bootstrap/cache/'.basename($dbName, '.sqlite').'-routes.php',
+];
+try {
+    foreach (['config:cache', 'route:cache', 'schedule:list'] as $command) {
+        $process = new Symfony\Component\Process\Process([PHP_BINARY, 'artisan', $command], $host, $cachePaths);
+        $process->mustRun();
+    }
+    check(substr_count($process->getOutput(), 'vito-pg:work') === 1, 'Config and route caching preserve one scheduled plugin worker');
+    check($plugin->fresh()->is_enabled && !$plugin->errors()->exists(), 'Vito keeps the plugin enabled after booting with cached configuration');
+} finally {
+    foreach ($cachePaths as $path) { @unlink($host.'/'.$path); }
+}
 
 $owner = App\Models\User::create(['name' => 'Owner', 'email' => 'owner@example.test', 'password' => bcrypt('only-test-password'), 'timezone' => 'UTC']);
 $other = App\Models\User::create(['name' => 'Other', 'email' => 'other@example.test', 'password' => bcrypt('only-test-password'), 'timezone' => 'UTC']);
